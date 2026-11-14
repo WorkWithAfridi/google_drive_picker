@@ -4,8 +4,11 @@ The example demonstrates the complete 2.0 flow:
 
 - Initialize Google Sign-In once.
 - Authenticate and request read-only Drive authorization.
-- Browse, search, and select a Drive file.
-- Switch between single and multiple selection with a maximum file count.
+- Browse, search, and select Drive files.
+- Try ready-made triggers for unrestricted single selection, capped multiple
+  selection, images, documents, and runtime options.
+- See the API, selection mode, file limit, and format constraints for each
+  trigger before opening it.
 - Inspect and reopen the downloaded temporary file.
 - Handle cancellation and errors.
 - Sign out.
@@ -80,11 +83,12 @@ environment-specific values through their normal build configuration.
 
 ## Expected behavior
 
-1. Tap **Choose a file**.
+1. Choose one of the trigger cards on the home screen and tap **Try trigger**.
 2. Select a Google account and authorize read-only Drive access.
-3. Search or browse the file list.
-4. Confirm a download.
-5. The selected path appears on the home screen; use the open icon to launch a
+3. Search or browse the file list. The picker applies the trigger's single or
+   multiple selection mode, maximum count, and format filters.
+4. Confirm the selection and download.
+5. The downloaded paths appear on the home screen; use the open icon to launch a
    compatible installed application.
 6. Use the app-bar sign-out action to end the Google session.
 
