@@ -1,3 +1,7 @@
+# 2.0.1
+
+- Fixed screenshot rendering on pub.dev by using verified absolute image URLs.
+
 # 2.0.0
 
 - Promoted the renamed package to version 2, matching the modernized legacy

@@ -25,11 +25,11 @@ Firebase Authentication or a Google API key.
 
 | List view | Grid view |
 |:---:|:---:|
-| <img src="assets/screenshots/drive-picker-list.jpg" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="assets/screenshots/drive-picker-grid.jpg" alt="Google Drive Picker responsive grid view" width="300"> |
+| <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/drive-picker-list.jpg" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/drive-picker-grid.jpg" alt="Google Drive Picker responsive grid view" width="300"> |
 
 | Example app | Google account chooser |
 |:---:|:---:|
-| <img src="assets/screenshots/example-home.jpg" alt="Google Drive Picker example app" width="300"> | <img src="assets/screenshots/account-chooser.jpg" alt="Privacy-safe Google account chooser example" width="300"> |
+| <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/example-home.jpg" alt="Google Drive Picker example app" width="300"> | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/account-chooser.jpg" alt="Privacy-safe Google account chooser example" width="300"> |
 
 ## Requirements
 
@@ -47,7 +47,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^2.0.0
+  google_drive_picker: ^2.0.1
 ```
 
 Then run:
