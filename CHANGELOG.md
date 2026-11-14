@@ -1,4 +1,4 @@
-## Unreleased
+# 2.1.0
 
 - Updated the picker to a cleaner Google Drive-inspired layout.
 - Removed the picker intro copy and signed-in account name.
@@ -9,6 +9,12 @@
 - Added single and multiple selection modes configured by the picker trigger.
 - Added maximum-selection limits plus extension and exact/wildcard MIME type
   allowlists, including Google Workspace export-extension matching.
+- Added a trigger gallery to the example app for single, multiple, image,
+  document, and runtime-configured picker flows.
+- Opened the picker immediately after authorization, with in-screen Drive
+  loading, visible API failures, and a retry action.
+- Replaced the package screenshots with current privacy-safe trigger, list,
+  grid, and download-result views.
 
 # 2.0.1
 
