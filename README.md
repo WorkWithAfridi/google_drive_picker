@@ -1,5 +1,13 @@
 # Google Drive Handler
 
+> [!IMPORTANT]
+> **This package is moving to
+> [`google_drive_picker`](https://pub.dev/packages/google_drive_picker).**
+> `googledrivehandler` is now in maintenance-only mode and will be
+> discontinued after the replacement package is published. Version 2.0.0 is
+> provided as a migration bridge; new development will continue under the new
+> package name. See [MIGRATION.md](MIGRATION.md) for the migration path.
+
 `googledrivehandler` is a native Flutter file picker for browsing, searching,
 and downloading files from a user's Google Drive.
 
@@ -34,6 +42,8 @@ Firebase Authentication or a Google API key.
 The current API returns a `dart:io` `File`; web is not supported.
 
 ## Install
+
+For this migration release only:
 
 ```yaml
 dependencies:

@@ -1,5 +1,8 @@
 ## 2.0.0
 
+- Announced the move to the clearer `google_drive_picker` package name.
+- Marked `googledrivehandler` as maintenance-only ahead of its pub.dev
+  discontinuation and documented the replacement migration path.
 - Migrated to `google_sign_in` 7 and `googleapis` 18.
 - Removed Firebase and API-key requirements in favor of read-only OAuth.
 - Added complete pagination, Shared Drive support, shortcut handling, and
