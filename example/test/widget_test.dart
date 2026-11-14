@@ -1,6 +1,6 @@
-import 'package:example/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_drive_picker_example/main.dart';
 
 void main() {
   testWidgets('shows the picker onboarding and action', (

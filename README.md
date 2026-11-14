@@ -21,6 +21,16 @@ Firebase Authentication or a Google API key.
 - Sanitized filenames and temporary-file storage
 - Typed service errors and automatic HTTP client cleanup
 
+## Screenshots
+
+| List view | Grid view |
+|:---:|:---:|
+| <img src="assets/screenshots/drive-picker-list.png" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="assets/screenshots/drive-picker-grid.png" alt="Google Drive Picker responsive grid view" width="300"> |
+
+| Example app | Google account chooser |
+|:---:|:---:|
+| <img src="assets/screenshots/example-home.png" alt="Google Drive Picker example app" width="300"> | <img src="assets/screenshots/account-chooser.png" alt="Privacy-safe Google account chooser example" width="300"> |
+
 ## Requirements
 
 | Requirement | Minimum |
@@ -37,7 +47,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^1.0.0
+  google_drive_picker: ^2.0.0
 ```
 
 Then run:
@@ -200,7 +210,7 @@ example.
 The included example uses:
 
 ```text
-com.example.example
+com.immichtv.googleDrivePicker.example
 ```
 
 For another app, open `ios/Runner.xcodeproj` in Xcode and inspect

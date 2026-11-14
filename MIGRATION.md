@@ -9,7 +9,7 @@ changed.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^1.0.0
+  google_drive_picker: ^2.0.0
 ```
 
 Remove the old dependency:

@@ -19,7 +19,7 @@ screen, test-user, scope, credential, and production-verification steps.
 The example uses the identifiers:
 
 - Android application ID: `com.immichtv.google_drive_picker.example`
-- iOS bundle identifier: `com.example.example`
+- iOS bundle identifier: `com.immichtv.googleDrivePicker.example`
 
 For a real application, replace these sample identifiers in the native project
 and create matching OAuth clients.
@@ -50,7 +50,7 @@ Replace `YOUR_REVERSED_CLIENT_ID` in
 `GOOGLE_CLIENT_ID`.
 
 Create the client under **Google Auth Platform → Clients → Create client →
-iOS**, using bundle identifier `com.example.example`. The Cloud console shows
+iOS**, using bundle identifier `com.immichtv.googleDrivePicker.example`. The Cloud console shows
 the iOS URL scheme, or the downloaded plist provides `CLIENT_ID` and
 `REVERSED_CLIENT_ID`.
 

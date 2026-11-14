@@ -1,3 +1,13 @@
+# 2.0.0
+
+- Promoted the renamed package to version 2, matching the modernized legacy
+  release line.
+- Added privacy-safe screenshots for the example, account chooser, list view,
+  grid view, filters, and Drive thumbnails.
+- Completed the `google_drive_picker` naming audit across package metadata,
+  example projects, platform identifiers, tests, and documentation.
+- Updated the example application name and Apple bundle identifier.
+
 # 1.0.0
 
 - Initial release as `google_drive_picker`.
