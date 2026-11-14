@@ -129,7 +129,6 @@ class GoogleDrivePicker {
     final _GoogleAuthClient client = _GoogleAuthClient(headers);
     final GoogleDriveApiService service = GoogleDriveApiService(client);
     try {
-      final List<drive.File> files = await service.listFiles();
       if (!context.mounted) {
         return null;
       }
@@ -137,11 +136,8 @@ class GoogleDrivePicker {
       return await Navigator.of(context).push<List<File>>(
         MaterialPageRoute<List<File>>(
           builder:
-              (BuildContext context) => GoogleDriveScreen(
-                files: files,
-                service: service,
-                options: options,
-              ),
+              (BuildContext context) =>
+                  GoogleDriveScreen(service: service, options: options),
         ),
       );
     } finally {

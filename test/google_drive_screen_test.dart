@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -44,6 +45,38 @@ void main() {
     await tester.pump();
     expect(find.text('Alpha.pdf'), findsOneWidget);
     expect(find.text('Beta.jpg'), findsOneWidget);
+  });
+
+  testWidgets('opens immediately while Drive files load', (
+    WidgetTester tester,
+  ) async {
+    final _DeferredDriveService service = _DeferredDriveService();
+    await tester.pumpWidget(
+      MaterialApp(home: GoogleDriveScreen(service: service)),
+    );
+
+    expect(find.text('My Drive'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    service.complete(files);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Alpha.pdf'), findsOneWidget);
+    expect(find.text('Beta.jpg'), findsOneWidget);
+  });
+
+  testWidgets('shows Drive loading failures with a retry action', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(home: GoogleDriveScreen(service: _FailingDriveService())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Couldn’t load your Drive files'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.textContaining('Drive API unavailable'), findsOneWidget);
   });
 
   testWidgets('asks for confirmation before downloading', (
@@ -372,4 +405,38 @@ class _RecordingDriveService implements GoogleDriveService {
 
   @override
   Future<List<drive.File>> listFiles() async => const <drive.File>[];
+}
+
+class _DeferredDriveService implements GoogleDriveService {
+  final Completer<List<drive.File>> _completer = Completer<List<drive.File>>();
+
+  void complete(List<drive.File> files) {
+    _completer.complete(files);
+  }
+
+  @override
+  Future<List<drive.File>> listFiles() => _completer.future;
+
+  @override
+  Future<Uint8List> downloadBytes(drive.File file) async => Uint8List(0);
+
+  @override
+  Future<File> downloadFile(drive.File file, {Directory? directory}) {
+    throw UnimplementedError();
+  }
+}
+
+class _FailingDriveService implements GoogleDriveService {
+  @override
+  Future<List<drive.File>> listFiles() {
+    throw StateError('Drive API unavailable');
+  }
+
+  @override
+  Future<Uint8List> downloadBytes(drive.File file) async => Uint8List(0);
+
+  @override
+  Future<File> downloadFile(drive.File file, {Directory? directory}) {
+    throw UnimplementedError();
+  }
 }

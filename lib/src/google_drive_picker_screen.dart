@@ -11,12 +11,15 @@ import 'google_drive_service.dart';
 class GoogleDriveScreen extends StatefulWidget {
   const GoogleDriveScreen({
     super.key,
-    required this.files,
+    this.files,
     required this.service,
     this.options = const GoogleDrivePickerOptions(),
   });
 
-  final List<drive.File> files;
+  /// Preloaded files, primarily useful for tests and custom integrations.
+  ///
+  /// When omitted, the screen opens immediately and loads from [service].
+  final List<drive.File>? files;
   final GoogleDriveService service;
   final GoogleDrivePickerOptions options;
 
@@ -36,9 +39,12 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
   String _query = '';
   _DriveFilter _filter = _DriveFilter.all;
   final Set<drive.File> _selectedFiles = <drive.File>{};
+  late List<drive.File> _files;
+  late bool _isLoading;
+  Object? _loadError;
 
   List<drive.File> get _eligibleFiles =>
-      widget.files.where(widget.options.allows).toList(growable: false);
+      _files.where(widget.options.allows).toList(growable: false);
 
   List<drive.File> get _visibleFiles {
     final String normalizedQuery = _query.toLowerCase();
@@ -50,6 +56,16 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
           return matchesQuery && _matchesFilter(file, _filter);
         })
         .toList(growable: false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _files = widget.files ?? const <drive.File>[];
+    _isLoading = widget.files == null;
+    if (_isLoading) {
+      _loadFiles();
+    }
   }
 
   @override
@@ -129,7 +145,14 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
               ),
               Expanded(
                 child:
-                    files.isEmpty
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _loadError != null
+                        ? _LoadErrorState(
+                          error: _loadError!,
+                          onRetry: _loadFiles,
+                        )
+                        : files.isEmpty
                         ? _EmptyState(
                           hasQuery: _query.isNotEmpty,
                           hasFilter: _filter != _DriveFilter.all,
@@ -187,6 +210,29 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
               )
               : null,
     );
+  }
+
+  Future<void> _loadFiles() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final List<drive.File> files = await widget.service.listFiles();
+      if (!mounted) return;
+      setState(() {
+        _files = files;
+        _isLoading = false;
+      });
+    } on Object catch (error, stackTrace) {
+      debugPrint('Google Drive file loading failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() {
+        _loadError = error;
+        _isLoading = false;
+      });
+    }
   }
 
   void _toggleSearch() {
@@ -293,6 +339,64 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
       return message;
     }
     return 'Unable to download this file. Please try again.';
+  }
+}
+
+class _LoadErrorState extends StatelessWidget {
+  const _LoadErrorState({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 56,
+              color: colors.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Couldn’t load your Drive files',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check that the Google Drive API is enabled and that this '
+              'account can grant the requested Drive scope.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.error),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
