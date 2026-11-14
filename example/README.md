@@ -5,6 +5,7 @@ The example demonstrates the complete 2.0 flow:
 - Initialize Google Sign-In once.
 - Authenticate and request read-only Drive authorization.
 - Browse, search, and select a Drive file.
+- Switch between single and multiple selection with a maximum file count.
 - Inspect and reopen the downloaded temporary file.
 - Handle cancellation and errors.
 - Sign out.

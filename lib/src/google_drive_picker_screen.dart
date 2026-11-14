@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 
+import 'google_drive_picker_options.dart';
 import 'google_drive_service.dart';
 
 class GoogleDriveScreen extends StatefulWidget {
@@ -12,10 +13,12 @@ class GoogleDriveScreen extends StatefulWidget {
     super.key,
     required this.files,
     required this.service,
+    this.options = const GoogleDrivePickerOptions(),
   });
 
   final List<drive.File> files;
   final GoogleDriveService service;
+  final GoogleDrivePickerOptions options;
 
   @override
   State<GoogleDriveScreen> createState() => _GoogleDriveScreenState();
@@ -28,12 +31,18 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
   bool _showSearch = false;
   bool? _showGrid;
   bool _isDownloading = false;
+  int _downloadIndex = 0;
+  int _downloadTotal = 0;
   String _query = '';
   _DriveFilter _filter = _DriveFilter.all;
+  final Set<drive.File> _selectedFiles = <drive.File>{};
+
+  List<drive.File> get _eligibleFiles =>
+      widget.files.where(widget.options.allows).toList(growable: false);
 
   List<drive.File> get _visibleFiles {
     final String normalizedQuery = _query.toLowerCase();
-    return widget.files
+    return _eligibleFiles
         .where((drive.File file) {
           final bool matchesQuery =
               normalizedQuery.isEmpty ||
@@ -76,7 +85,11 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                     setState(() => _query = value.trim());
                   },
                 )
-                : const Text('My Drive'),
+                : Text(
+                  widget.options.allowMultiple && _selectedFiles.isNotEmpty
+                      ? '${_selectedFiles.length} selected'
+                      : 'My Drive',
+                ),
         actions: <Widget>[
           IconButton(
             tooltip: _showSearch ? 'Close search' : 'Search files',
@@ -105,7 +118,7 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
             children: <Widget>[
               _DriveToolbar(
                 shownCount: files.length,
-                totalCount: widget.files.length,
+                totalCount: _eligibleFiles.length,
                 selectedFilter: _filter,
                 onFilterChanged:
                     _isDownloading
@@ -120,6 +133,8 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                         ? _EmptyState(
                           hasQuery: _query.isNotEmpty,
                           hasFilter: _filter != _DriveFilter.all,
+                          hasFormatRestrictions:
+                              widget.options.hasFormatRestrictions,
                           onReset: _resetFilters,
                         )
                         : LayoutBuilder(
@@ -137,13 +152,19 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                                         key: const ValueKey<String>('grid'),
                                         files: files,
                                         enabled: !_isDownloading,
-                                        onTap: _confirmDownload,
+                                        multiSelect:
+                                            widget.options.allowMultiple,
+                                        selectedFiles: _selectedFiles,
+                                        onTap: _handleFileTap,
                                       )
                                       : _FileList(
                                         key: const ValueKey<String>('list'),
                                         files: files,
                                         enabled: !_isDownloading,
-                                        onTap: _confirmDownload,
+                                        multiSelect:
+                                            widget.options.allowMultiple,
+                                        selectedFiles: _selectedFiles,
+                                        onTap: _handleFileTap,
                                       ),
                             );
                           },
@@ -151,9 +172,20 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
               ),
             ],
           ),
-          if (_isDownloading) const _DownloadingOverlay(),
+          if (_isDownloading)
+            _DownloadingOverlay(index: _downloadIndex, total: _downloadTotal),
         ],
       ),
+      bottomNavigationBar:
+          widget.options.allowMultiple && _selectedFiles.isNotEmpty
+              ? _SelectionBar(
+                count: _selectedFiles.length,
+                maxFiles: widget.options.maxFiles,
+                enabled: !_isDownloading,
+                onClear: () => setState(_selectedFiles.clear),
+                onDownload: _confirmSelectedDownloads,
+              )
+              : null,
     );
   }
 
@@ -175,22 +207,69 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
     });
   }
 
+  void _handleFileTap(drive.File file) {
+    if (widget.options.allowMultiple) {
+      _toggleSelection(file);
+    } else {
+      _confirmDownload(file);
+    }
+  }
+
+  void _toggleSelection(drive.File file) {
+    if (_selectedFiles.contains(file)) {
+      setState(() => _selectedFiles.remove(file));
+      return;
+    }
+
+    final int? limit = widget.options.effectiveMaxFiles;
+    if (limit != null && _selectedFiles.length >= limit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You can select up to $limit files.')),
+      );
+      return;
+    }
+
+    setState(() => _selectedFiles.add(file));
+  }
+
   Future<void> _confirmDownload(drive.File file) async {
     final bool? confirmed = await showAdaptiveDialog<bool>(
       context: context,
       builder: (BuildContext context) => DownloadAlertDialog(file: file),
     );
     if (confirmed == true) {
-      await _download(file);
+      await _download(<drive.File>[file]);
     }
   }
 
-  Future<void> _download(drive.File file) async {
-    setState(() => _isDownloading = true);
+  Future<void> _confirmSelectedDownloads() async {
+    final List<drive.File> files = _selectedFiles.toList(growable: false);
+    final bool? confirmed = await showAdaptiveDialog<bool>(
+      context: context,
+      builder:
+          (BuildContext context) => DownloadSelectionAlertDialog(files: files),
+    );
+    if (confirmed == true) {
+      await _download(files);
+    }
+  }
+
+  Future<void> _download(List<drive.File> files) async {
+    setState(() {
+      _isDownloading = true;
+      _downloadIndex = 0;
+      _downloadTotal = files.length;
+    });
     try {
-      final File downloadedFile = await widget.service.downloadFile(file);
+      final List<File> downloadedFiles = <File>[];
+      for (int index = 0; index < files.length; index++) {
+        if (mounted) {
+          setState(() => _downloadIndex = index);
+        }
+        downloadedFiles.add(await widget.service.downloadFile(files[index]));
+      }
       if (mounted) {
-        Navigator.of(context).pop(downloadedFile);
+        Navigator.of(context).pop(downloadedFiles);
       }
     } on Object catch (error) {
       if (mounted) {
@@ -200,7 +279,11 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isDownloading = false);
+        setState(() {
+          _isDownloading = false;
+          _downloadIndex = 0;
+          _downloadTotal = 0;
+        });
       }
     }
   }
@@ -285,7 +368,7 @@ class _DriveToolbar extends StatelessWidget {
                 const Spacer(),
                 Text(
                   shownCount == totalCount
-                      ? '$totalCount files'
+                      ? '$totalCount ${totalCount == 1 ? 'file' : 'files'}'
                       : '$shownCount of $totalCount',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: colors.onSurfaceVariant,
@@ -341,11 +424,15 @@ class _FileList extends StatelessWidget {
     super.key,
     required this.files,
     required this.enabled,
+    required this.multiSelect,
+    required this.selectedFiles,
     required this.onTap,
   });
 
   final List<drive.File> files;
   final bool enabled;
+  final bool multiSelect;
+  final Set<drive.File> selectedFiles;
   final ValueChanged<drive.File> onTap;
 
   @override
@@ -364,6 +451,8 @@ class _FileList extends StatelessWidget {
         return _FileListCard(
           file: file,
           enabled: enabled,
+          multiSelect: multiSelect,
+          selected: selectedFiles.contains(file),
           onTap: () => onTap(file),
         );
       },
@@ -376,11 +465,15 @@ class _FileGrid extends StatelessWidget {
     super.key,
     required this.files,
     required this.enabled,
+    required this.multiSelect,
+    required this.selectedFiles,
     required this.onTap,
   });
 
   final List<drive.File> files;
   final bool enabled;
+  final bool multiSelect;
+  final Set<drive.File> selectedFiles;
   final ValueChanged<drive.File> onTap;
 
   @override
@@ -399,6 +492,8 @@ class _FileGrid extends StatelessWidget {
         return _FileGridCard(
           file: file,
           enabled: enabled,
+          multiSelect: multiSelect,
+          selected: selectedFiles.contains(file),
           onTap: () => onTap(file),
         );
       },
@@ -410,18 +505,22 @@ class _FileListCard extends StatelessWidget {
   const _FileListCard({
     required this.file,
     required this.enabled,
+    required this.multiSelect,
+    required this.selected,
     required this.onTap,
   });
 
   final drive.File file;
   final bool enabled;
+  final bool multiSelect;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Material(
-      color: colors.surface,
+      color: selected ? colors.secondaryContainer : colors.surface,
       borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -450,11 +549,18 @@ class _FileListCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Download ${file.name ?? 'file'}',
-                onPressed: enabled ? onTap : null,
-                icon: const Icon(Icons.download_rounded),
-              ),
+              if (multiSelect)
+                Checkbox(
+                  value: selected,
+                  onChanged: enabled ? (_) => onTap() : null,
+                  semanticLabel: 'Select ${file.name ?? 'file'}',
+                )
+              else
+                IconButton(
+                  tooltip: 'Download ${file.name ?? 'file'}',
+                  onPressed: enabled ? onTap : null,
+                  icon: const Icon(Icons.download_rounded),
+                ),
             ],
           ),
         ),
@@ -467,21 +573,28 @@ class _FileGridCard extends StatelessWidget {
   const _FileGridCard({
     required this.file,
     required this.enabled,
+    required this.multiSelect,
+    required this.selected,
     required this.onTap,
   });
 
   final drive.File file;
   final bool enabled;
+  final bool multiSelect;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Material(
-      color: colors.surfaceContainerLow,
+      color: selected ? colors.secondaryContainer : colors.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colors.outlineVariant),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -497,11 +610,18 @@ class _FileGridCard extends StatelessWidget {
                   Positioned(
                     right: 10,
                     top: 10,
-                    child: IconButton.filled(
-                      tooltip: 'Download ${file.name ?? 'file'}',
-                      onPressed: enabled ? onTap : null,
-                      icon: const Icon(Icons.download_rounded),
-                    ),
+                    child:
+                        multiSelect
+                            ? Checkbox(
+                              value: selected,
+                              onChanged: enabled ? (_) => onTap() : null,
+                              semanticLabel: 'Select ${file.name ?? 'file'}',
+                            )
+                            : IconButton.filled(
+                              tooltip: 'Download ${file.name ?? 'file'}',
+                              onPressed: enabled ? onTap : null,
+                              icon: const Icon(Icons.download_rounded),
+                            ),
                   ),
                 ],
               ),
@@ -628,16 +748,19 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.hasQuery,
     required this.hasFilter,
+    required this.hasFormatRestrictions,
     required this.onReset,
   });
 
   final bool hasQuery;
   final bool hasFilter;
+  final bool hasFormatRestrictions;
   final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
     final bool isFiltered = hasQuery || hasFilter;
+    final bool isFormatRestricted = !isFiltered && hasFormatRestrictions;
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
@@ -663,7 +786,11 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              isFiltered ? 'No matching files' : 'Your Drive looks empty',
+              isFiltered
+                  ? 'No matching files'
+                  : isFormatRestricted
+                  ? 'No allowed file types'
+                  : 'Your Drive looks empty',
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,
@@ -673,6 +800,8 @@ class _EmptyState extends StatelessWidget {
             Text(
               isFiltered
                   ? 'Try another search or clear the active filter.'
+                  : isFormatRestricted
+                  ? 'No files match the formats allowed by this picker.'
                   : 'No downloadable files were found for this account.',
               textAlign: TextAlign.center,
               style: Theme.of(
@@ -694,8 +823,62 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({
+    required this.count,
+    required this.maxFiles,
+    required this.enabled,
+    required this.onClear,
+    required this.onDownload,
+  });
+
+  final int count;
+  final int? maxFiles;
+  final bool enabled;
+  final VoidCallback onClear;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surface,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  maxFiles == null ? '$count selected' : '$count / $maxFiles',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              TextButton(
+                onPressed: enabled ? onClear : null,
+                child: const Text('Clear'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: enabled ? onDownload : null,
+                icon: const Icon(Icons.download_rounded),
+                label: Text('Download ($count)'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DownloadingOverlay extends StatelessWidget {
-  const _DownloadingOverlay();
+  const _DownloadingOverlay({required this.index, required this.total});
+
+  final int index;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +899,9 @@ class _DownloadingOverlay extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    'Downloading file…',
+                    total > 1
+                        ? 'Downloading ${index + 1} of $total…'
+                        : 'Downloading file…',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
@@ -788,6 +973,54 @@ class DownloadAlertDialog extends StatelessWidget {
           ),
         ],
       ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(true),
+          icon: const Icon(Icons.download_rounded),
+          label: const Text('Download'),
+        ),
+      ],
+    );
+  }
+}
+
+class DownloadSelectionAlertDialog extends StatelessWidget {
+  const DownloadSelectionAlertDialog({super.key, required this.files});
+
+  final List<drive.File> files;
+
+  @override
+  Widget build(BuildContext context) {
+    final String title = 'Download ${files.length} files?';
+    final String message =
+        'The selected files will be downloaded to temporary storage.';
+    final TargetPlatform platform = defaultTargetPlatform;
+    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+      return CupertinoAlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: <Widget>[
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Download'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      icon: const Icon(Icons.download_for_offline_outlined),
+      title: Text(title),
+      content: Text(message),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

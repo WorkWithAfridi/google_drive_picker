@@ -6,6 +6,7 @@ import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
 
 import 'google_drive_service.dart';
+import 'google_drive_picker_options.dart';
 import 'google_drive_picker_screen.dart';
 
 /// Coordinates Google authentication and the Drive file picker.
@@ -50,7 +51,50 @@ class GoogleDrivePicker {
   ///
   /// Returns the downloaded temporary file, or `null` when the user cancels
   /// authentication or closes the picker without choosing a file.
-  Future<File?> pickFile({required BuildContext context}) async {
+  Future<File?> pickFile({
+    required BuildContext context,
+    Set<String> allowedExtensions = const <String>{},
+    Set<String> allowedMimeTypes = const <String>{},
+  }) async {
+    final List<File>? files = await pick(
+      context: context,
+      options: GoogleDrivePickerOptions(
+        allowedExtensions: allowedExtensions,
+        allowedMimeTypes: allowedMimeTypes,
+      ),
+    );
+    return files == null || files.isEmpty ? null : files.first;
+  }
+
+  /// Authenticates the user and opens a multiple-file Drive picker.
+  ///
+  /// Returns downloaded temporary files in selection order, or `null` when
+  /// the user cancels authentication or closes the picker without choosing.
+  Future<List<File>?> pickFiles({
+    required BuildContext context,
+    int? maxFiles,
+    Set<String> allowedExtensions = const <String>{},
+    Set<String> allowedMimeTypes = const <String>{},
+  }) {
+    return pick(
+      context: context,
+      options: GoogleDrivePickerOptions(
+        allowMultiple: true,
+        maxFiles: maxFiles,
+        allowedExtensions: allowedExtensions,
+        allowedMimeTypes: allowedMimeTypes,
+      ),
+    );
+  }
+
+  /// Opens the picker with a fully specified [options] object.
+  ///
+  /// This is useful when selection behavior is chosen dynamically. Prefer
+  /// [pickFile] or [pickFiles] when the mode is known at the call site.
+  Future<List<File>?> pick({
+    required BuildContext context,
+    GoogleDrivePickerOptions options = const GoogleDrivePickerOptions(),
+  }) async {
     await initialize();
 
     final GoogleSignIn signIn = GoogleSignIn.instance;
@@ -90,11 +134,14 @@ class GoogleDrivePicker {
         return null;
       }
 
-      return await Navigator.of(context).push<File>(
-        MaterialPageRoute<File>(
+      return await Navigator.of(context).push<List<File>>(
+        MaterialPageRoute<List<File>>(
           builder:
-              (BuildContext context) =>
-                  GoogleDriveScreen(files: files, service: service),
+              (BuildContext context) => GoogleDriveScreen(
+                files: files,
+                service: service,
+                options: options,
+              ),
         ),
       );
     } finally {

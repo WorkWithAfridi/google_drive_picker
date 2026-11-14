@@ -6,6 +6,9 @@
   dark color scheme.
 - Improved adaptive list/grid behavior and allowed wide layouts to override
   their automatic grid mode.
+- Added single and multiple selection modes configured by the picker trigger.
+- Added maximum-selection limits plus extension and exact/wildcard MIME type
+  allowlists, including Google Workspace export-extension matching.
 
 # 2.0.1
 

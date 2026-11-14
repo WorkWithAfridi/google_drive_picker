@@ -11,6 +11,7 @@ Firebase Authentication or a Google API key.
 - Read-only Google Drive OAuth authorization
 - Paginated listing across My Drive and Shared Drives
 - Thumbnail previews with list/grid views and file-type filters
+- Single or multiple selection with maximum-count and format restrictions
 - Search, adaptive download confirmation, loading, empty, and error states
 - Google Drive shortcut resolution and download-permission checks
 - Blob-file downloads and Google Workspace exports:
@@ -380,6 +381,57 @@ if (file != null) {
 }
 ```
 
+Restrict a single-file picker by extension and/or MIME type:
+
+```dart
+final File? document = await GoogleDrivePicker.instance.pickFile(
+  context: context,
+  allowedExtensions: const <String>{'pdf', 'docx'},
+  allowedMimeTypes: const <String>{
+    'application/pdf',
+    'application/vnd.google-apps.document',
+  },
+);
+```
+
+Allow multiple selection and enforce a maximum count:
+
+```dart
+final List<File>? images = await GoogleDrivePicker.instance.pickFiles(
+  context: context,
+  maxFiles: 5,
+  allowedExtensions: const <String>{'jpg', 'jpeg', 'png', 'webp'},
+  allowedMimeTypes: const <String>{'image/*'},
+);
+
+if (images != null) {
+  for (final File image in images) {
+    debugPrint(image.path);
+  }
+}
+```
+
+Format matching is case-insensitive. Extensions may include a leading dot,
+and MIME types support category wildcards such as `image/*` and `video/*`.
+When extension and MIME allowlists are both provided, a file is shown when it
+matches either list. Google Docs, Sheets, Slides, and Drawings also match their
+export extensions (`docx`, `xlsx`, `pptx`, and `png`). Omit `maxFiles` to allow
+any number of selections.
+
+For a selection mode chosen at runtime, use `pick(...)` with a
+`GoogleDrivePickerOptions` object. It always returns `List<File>?`:
+
+```dart
+final List<File>? files = await GoogleDrivePicker.instance.pick(
+  context: context,
+  options: GoogleDrivePickerOptions(
+    allowMultiple: shouldAllowMultiple,
+    maxFiles: shouldAllowMultiple ? 3 : null,
+    allowedExtensions: const <String>{'pdf'},
+  ),
+);
+```
+
 Sign out when your application needs to end the Google session:
 
 ```dart
@@ -388,9 +440,9 @@ await GoogleDrivePicker.instance.signOut();
 
 ## File lifecycle
 
-The returned file is written to the platform temporary directory. The
-operating system may delete it at any time. Copy it to application documents or
-other permanent storage if it must survive cache cleanup.
+Returned files are written to the platform temporary directory. The operating
+system may delete them at any time. Copy them to application documents or
+other permanent storage if they must survive cache cleanup.
 
 An existing temporary file with the same name may be replaced by a later
 download.
@@ -398,6 +450,7 @@ download.
 ## Errors and cancellation
 
 - Cancelling Google Sign-In or closing the picker returns `null`.
+- `pickFile` returns `File?`; `pickFiles` and `pick` return `List<File>?`.
 - `GoogleDriveAuthorizationException` indicates that Drive authorization was
   not available.
 - `GoogleDriveFileException` covers unsupported exports, missing metadata, and
