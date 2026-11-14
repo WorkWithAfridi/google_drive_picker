@@ -10,6 +10,12 @@ underlying sign-in SDK. Check:
 - `serverClientId` is the web OAuth client ID, not the Android client ID.
 - When using `google-services.json`, it contains a web OAuth client entry.
 
+If Android logs contain `UNREGISTERED_ON_API_CONSOLE`, the installed
+application's package/SHA-1 pair is not registered in the same Google Cloud
+project as the web OAuth client. Create a separate Android OAuth client for
+every package name and signing certificate combination. Renaming an app package
+requires a new matching Android client even when its web client ID is unchanged.
+
 ## `serverClientId must be provided on Android`
 
 Either pass the web OAuth client ID:

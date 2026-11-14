@@ -10,9 +10,11 @@ Firebase Authentication or a Google API key.
 
 - Read-only Google Drive OAuth authorization
 - Paginated listing across My Drive and Shared Drives
-- Thumbnail previews with list/grid views and file-type filters
-- Single or multiple selection with maximum-count and format restrictions
-- Search, adaptive download confirmation, loading, empty, and error states
+- Thumbnail previews with adaptive list/grid views and file-type filters
+- Trigger-defined single or multiple selection with maximum-count, extension,
+  and exact/wildcard MIME restrictions
+- Host light/dark theme inheritance with adaptive confirmation dialogs
+- Immediate picker navigation with loading, empty, retry, and error states
 - Google Drive shortcut resolution and download-permission checks
 - Blob-file downloads and Google Workspace exports:
   - Google Docs → `.docx`
@@ -28,9 +30,9 @@ Firebase Authentication or a Google API key.
 |:---:|:---:|
 | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/drive-picker-list.jpg" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/drive-picker-grid.jpg" alt="Google Drive Picker responsive grid view" width="300"> |
 
-| Example app | Google account chooser |
+| Trigger gallery | Download result |
 |:---:|:---:|
-| <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/example-home.jpg" alt="Google Drive Picker example app" width="300"> | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/account-chooser.jpg" alt="Privacy-safe Google account chooser example" width="300"> |
+| <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/example-home.jpg" alt="Google Drive Picker trigger gallery" width="300"> | <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/screenshots/download-result.jpg" alt="Google Drive Picker downloaded file result" width="300"> |
 
 ## Requirements
 
@@ -48,7 +50,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^2.0.1
+  google_drive_picker: ^2.1.0
 ```
 
 Then run:
@@ -380,6 +382,14 @@ if (file != null) {
   debugPrint(file.path);
 }
 ```
+
+### Configure each picker trigger
+
+The caller controls selection behavior for every invocation. Use `pickFile`
+for a single result, `pickFiles` for multiple results, or `pick` with a
+`GoogleDrivePickerOptions` object when the configuration is chosen at runtime.
+The picker applies those constraints before showing files, so users can only
+select valid results.
 
 Restrict a single-file picker by extension and/or MIME type:
 

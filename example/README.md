@@ -1,6 +1,6 @@
 # Google Drive Picker example
 
-The example demonstrates the complete 2.0 flow:
+The example demonstrates the complete 2.1 flow:
 
 - Initialize Google Sign-In once.
 - Authenticate and request read-only Drive authorization.
@@ -12,6 +12,10 @@ The example demonstrates the complete 2.0 flow:
 - Inspect and reopen the downloaded temporary file.
 - Handle cancellation and errors.
 - Sign out.
+
+The home screen is an interactive trigger gallery. Each card documents the API
+being called and its selection mode, maximum count, and format restrictions so
+package consumers can try every supported configuration without editing code.
 
 ## Configure Google OAuth
 
