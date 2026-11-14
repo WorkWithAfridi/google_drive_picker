@@ -1,4 +1,4 @@
-# Google Drive Handler example
+# Google Drive Picker example
 
 The example demonstrates the complete 2.0 flow:
 
@@ -18,7 +18,7 @@ screen, test-user, scope, credential, and production-verification steps.
 
 The example uses the identifiers:
 
-- Android application ID: `com.immichtv.googledrivehandler.example`
+- Android application ID: `com.immichtv.google_drive_picker.example`
 - iOS bundle identifier: `com.example.example`
 
 For a real application, replace these sample identifiers in the native project

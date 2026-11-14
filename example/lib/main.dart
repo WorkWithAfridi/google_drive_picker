@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:googledrivehandler/googledrivehandler.dart';
+import 'package:google_drive_picker/google_drive_picker.dart';
 import 'package:open_file/open_file.dart';
 
 const String _clientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
@@ -11,24 +11,24 @@ const String _serverClientId = String.fromEnvironment(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GoogleDriveHandler().initialize(
+  await GoogleDrivePicker.instance.initialize(
     clientId:
         (Platform.isIOS || Platform.isMacOS) && _clientId.isNotEmpty
             ? _clientId
             : null,
     serverClientId: _serverClientId.isEmpty ? null : _serverClientId,
   );
-  runApp(const GoogleDriveHandlerExampleApp());
+  runApp(const GoogleDrivePickerExampleApp());
 }
 
-class GoogleDriveHandlerExampleApp extends StatelessWidget {
-  const GoogleDriveHandlerExampleApp({super.key});
+class GoogleDrivePickerExampleApp extends StatelessWidget {
+  const GoogleDrivePickerExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Google Drive Handler',
+      title: 'Google Drive Picker',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -54,7 +54,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Google Drive Handler'),
+        title: const Text('Google Drive Picker'),
         actions: <Widget>[
           IconButton(
             tooltip: 'Sign out',
@@ -119,7 +119,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _pickFile() async {
     _setBusy(true);
     try {
-      final File? file = await GoogleDriveHandler().getFileFromGoogleDrive(
+      final File? file = await GoogleDrivePicker.instance.pickFile(
         context: context,
       );
       if (!mounted) return;
@@ -155,7 +155,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _signOut() async {
     _setBusy(true);
     try {
-      await GoogleDriveHandler().signOut();
+      await GoogleDrivePicker.instance.signOut();
       if (mounted) {
         setState(() {
           _selectedFile = null;

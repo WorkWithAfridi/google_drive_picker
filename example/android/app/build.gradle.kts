@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.immichtv.googledrivehandler.example"
+    namespace = "com.immichtv.google_drive_picker.example"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.immichtv.googledrivehandler.example"
+        applicationId = "com.immichtv.google_drive_picker.example"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

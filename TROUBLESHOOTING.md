@@ -15,7 +15,7 @@ underlying sign-in SDK. Check:
 Either pass the web OAuth client ID:
 
 ```dart
-await GoogleDriveHandler().initialize(
+await GoogleDrivePicker.instance.initialize(
   serverClientId: 'YOUR_WEB_OAUTH_CLIENT_ID',
 );
 ```
@@ -47,7 +47,7 @@ the `google_sign_in_ios` macOS integration documentation.
 
 ## A Google Workspace file cannot be exported
 
-Version 2 exports Docs, Sheets, Slides, and Drawings. Other Google-native types,
+The picker exports Docs, Sheets, Slides, and Drawings. Other Google-native types,
 including Forms and some newer Workspace formats, do not have a supported
 export mapping and produce `GoogleDriveFileException`.
 

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:googledrivehandler/googledrivehandler.dart';
+import 'package:google_drive_picker/google_drive_picker.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -108,7 +108,7 @@ void main() {
             ..name = '../Quarter:One'
             ..mimeType = 'application/vnd.google-apps.spreadsheet';
       final Directory directory = await Directory.systemTemp.createTemp(
-        'googledrivehandler_test_',
+        'google_drive_picker_test_',
       );
 
       try {

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('shows the version 2 onboarding and picker action', (
+  testWidgets('shows the picker onboarding and action', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const GoogleDriveHandlerExampleApp());
+    await tester.pumpWidget(const GoogleDrivePickerExampleApp());
 
     expect(find.text('Google Drive file picker'), findsOneWidget);
     expect(find.text('OAuth configuration'), findsOneWidget);

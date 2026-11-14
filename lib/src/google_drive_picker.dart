@@ -6,15 +6,16 @@ import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
 
 import 'google_drive_service.dart';
-import 'googledrivehandler_screen.dart';
+import 'google_drive_picker_screen.dart';
 
 /// Coordinates Google authentication and the Drive file picker.
-class GoogleDriveHandler {
-  GoogleDriveHandler._();
+class GoogleDrivePicker {
+  GoogleDrivePicker._();
 
-  static final GoogleDriveHandler _instance = GoogleDriveHandler._();
+  /// Shared picker instance used by most applications.
+  static final GoogleDrivePicker instance = GoogleDrivePicker._();
 
-  factory GoogleDriveHandler() => _instance;
+  factory GoogleDrivePicker() => instance;
 
   Future<void>? _initialization;
   GoogleSignInAccount? _account;
@@ -49,14 +50,14 @@ class GoogleDriveHandler {
   ///
   /// Returns the downloaded temporary file, or `null` when the user cancels
   /// authentication or closes the picker without choosing a file.
-  Future<File?> getFileFromGoogleDrive({required BuildContext context}) async {
+  Future<File?> pickFile({required BuildContext context}) async {
     await initialize();
 
     final GoogleSignIn signIn = GoogleSignIn.instance;
     if (!signIn.supportsAuthenticate()) {
       throw UnsupportedError(
         'This platform requires platform-provided Google Sign-In UI. '
-        'GoogleDriveHandler currently supports the interactive Android, iOS, '
+        'GoogleDrivePicker currently supports the interactive Android, iOS, '
         'and macOS sign-in flow.',
       );
     }
@@ -102,6 +103,13 @@ class GoogleDriveHandler {
     } finally {
       client.close();
     }
+  }
+
+  /// Compatibility alias for applications migrating from
+  /// `googledrivehandler`.
+  @Deprecated('Use pickFile(context: context) instead.')
+  Future<File?> getFileFromGoogleDrive({required BuildContext context}) {
+    return pickFile(context: context);
   }
 
   /// Signs the current user out of Google Sign-In.

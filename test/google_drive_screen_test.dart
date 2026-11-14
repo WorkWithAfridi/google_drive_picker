@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:googledrivehandler/src/google_drive_service.dart';
-import 'package:googledrivehandler/src/googledrivehandler_screen.dart';
+import 'package:google_drive_picker/src/google_drive_picker_screen.dart';
+import 'package:google_drive_picker/src/google_drive_service.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 
 void main() {

@@ -1,14 +1,15 @@
-name: googledrivehandler
-description: Browse, search, and download Google Drive files from Flutter apps.
-version: 2.0.0
-homepage: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package
-repository: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package
-issue_tracker: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package/issues
+name: google_drive_picker
+description: A modern Flutter Google Drive file picker with OAuth, search, thumbnails, filters, and downloads.
+version: 1.0.0
+homepage: https://github.com/WorkWithAfridi/google_drive_picker
+repository: https://github.com/WorkWithAfridi/google_drive_picker
+issue_tracker: https://github.com/WorkWithAfridi/google_drive_picker/issues
 topics:
   - google-drive
+  - file-picker
   - google-sign-in
-  - files
-  - download
+  - oauth
+  - flutter
 
 environment:
   sdk: ">=3.7.0 <4.0.0"
@@ -18,7 +19,7 @@ dependencies:
   flutter:
     sdk: flutter
   google_sign_in: ^7.2.0
-  googleapis: ^18.0.0
+  googleapis: ^19.0.0
   http: ^1.6.0
   path: ^1.9.1
   path_provider: ^2.1.6

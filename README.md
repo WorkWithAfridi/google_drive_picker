@@ -1,17 +1,9 @@
-# Google Drive Handler
+# Google Drive Picker
 
-> [!IMPORTANT]
-> **This package is moving to
-> [`google_drive_picker`](https://pub.dev/packages/google_drive_picker).**
-> `googledrivehandler` is now in maintenance-only mode and will be
-> discontinued after the replacement package is published. Version 2.0.0 is
-> provided as a migration bridge; new development will continue under the new
-> package name. See [MIGRATION.md](MIGRATION.md) for the migration path.
-
-`googledrivehandler` is a native Flutter file picker for browsing, searching,
+`google_drive_picker` is a modern Flutter file picker for browsing, searching,
 and downloading files from a user's Google Drive.
 
-Version 2 uses Google Sign-In 7 and OAuth directly. It does not require
+The package uses Google Sign-In 7 and OAuth directly. It does not require
 Firebase Authentication or a Google API key.
 
 ## Features
@@ -43,11 +35,9 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ## Install
 
-For this migration release only:
-
 ```yaml
 dependencies:
-  googledrivehandler: ^2.0.0
+  google_drive_picker: ^1.0.0
 ```
 
 Then run:
@@ -138,7 +128,7 @@ Direct page: [OAuth clients](https://console.cloud.google.com/auth/clients)
 For the included example it is:
 
 ```text
-com.immichtv.googledrivehandler.example
+com.immichtv.google_drive_picker.example
 ```
 
 For another app, read `applicationId` from
@@ -340,12 +330,12 @@ identifiers, so both arguments are optional:
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:googledrivehandler/googledrivehandler.dart';
+import 'package:google_drive_picker/google_drive_picker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await GoogleDriveHandler().initialize(
+  await GoogleDrivePicker.instance.initialize(
     clientId: optionalIosClientId,
     serverClientId: optionalWebClientId,
   );
@@ -358,7 +348,7 @@ When supporting both Android and Apple platforms from one codebase, only pass
 the Apple client ID on iOS/macOS:
 
 ```dart
-await GoogleDriveHandler().initialize(
+await GoogleDrivePicker.instance.initialize(
   clientId: (Platform.isIOS || Platform.isMacOS) ? iosClientId : null,
   serverClientId: webClientId,
 );
@@ -370,7 +360,7 @@ The included example performs this platform check automatically for its
 Open the picker from a user interaction:
 
 ```dart
-final File? file = await GoogleDriveHandler().getFileFromGoogleDrive(
+final File? file = await GoogleDrivePicker.instance.pickFile(
   context: context,
 );
 
@@ -383,7 +373,7 @@ if (file != null) {
 Sign out when your application needs to end the Google session:
 
 ```dart
-await GoogleDriveHandler().signOut();
+await GoogleDrivePicker.instance.signOut();
 ```
 
 ## File lifecycle
