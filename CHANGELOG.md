@@ -1,3 +1,10 @@
+## 2.0.1
+
+- Final release of `googledrivehandler`.
+- Linked the published replacement package, `google_drive_picker` 1.0.0.
+- Marked this package as discontinued and directed users to the migration
+  guide.
+
 ## 2.0.0
 
 - Announced the move to the clearer `google_drive_picker` package name.
