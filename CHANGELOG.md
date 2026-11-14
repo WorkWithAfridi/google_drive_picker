@@ -1,3 +1,12 @@
+## Unreleased
+
+- Updated the picker to a cleaner Google Drive-inspired layout.
+- Removed the picker intro copy and signed-in account name.
+- Made picker surfaces, controls, and states inherit the host app's light or
+  dark color scheme.
+- Improved adaptive list/grid behavior and allowed wide layouts to override
+  their automatic grid mode.
+
 # 2.0.1
 
 - Fixed screenshot rendering on pub.dev by using verified absolute image URLs.

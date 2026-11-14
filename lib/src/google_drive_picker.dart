@@ -93,11 +93,8 @@ class GoogleDrivePicker {
       return await Navigator.of(context).push<File>(
         MaterialPageRoute<File>(
           builder:
-              (BuildContext context) => GoogleDriveScreen(
-                files: files,
-                service: service,
-                userName: _account?.displayName ?? _account?.email ?? 'Google',
-              ),
+              (BuildContext context) =>
+                  GoogleDriveScreen(files: files, service: service),
         ),
       );
     } finally {

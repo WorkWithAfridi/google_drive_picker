@@ -12,12 +12,10 @@ class GoogleDriveScreen extends StatefulWidget {
     super.key,
     required this.files,
     required this.service,
-    required this.userName,
   });
 
   final List<drive.File> files;
   final GoogleDriveService service;
-  final String userName;
 
   @override
   State<GoogleDriveScreen> createState() => _GoogleDriveScreenState();
@@ -28,7 +26,7 @@ enum _DriveFilter { all, images, documents, media }
 class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
-  bool _showGrid = false;
+  bool? _showGrid;
   bool _isDownloading = false;
   String _query = '';
   _DriveFilter _filter = _DriveFilter.all;
@@ -55,13 +53,14 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
   Widget build(BuildContext context) {
     final List<drive.File> files = _visibleFiles;
     final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool effectiveGrid =
+        _showGrid ?? MediaQuery.sizeOf(context).width >= 720;
 
     return Scaffold(
-      backgroundColor: colors.surfaceContainerLowest,
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: colors.surfaceContainerLowest,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
-        titleSpacing: 20,
         title:
             _showSearch
                 ? TextField(
@@ -69,7 +68,7 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                   autofocus: true,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Search your Drive',
+                    hintText: 'Search in Drive',
                     prefixIcon: Icon(Icons.search),
                   ),
                   textInputAction: TextInputAction.search,
@@ -77,21 +76,7 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                     setState(() => _query = value.trim());
                   },
                 )
-                : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text('Google Drive'),
-                    Text(
-                      widget.userName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
+                : const Text('My Drive'),
         actions: <Widget>[
           IconButton(
             tooltip: _showSearch ? 'Close search' : 'Search files',
@@ -99,13 +84,15 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
             icon: Icon(_showSearch ? Icons.close : Icons.search_rounded),
           ),
           IconButton(
-            tooltip: _showGrid ? 'Show list' : 'Show grid',
+            tooltip: effectiveGrid ? 'Show list' : 'Show grid',
             onPressed:
                 _isDownloading
                     ? null
-                    : () => setState(() => _showGrid = !_showGrid),
+                    : () => setState(() => _showGrid = !effectiveGrid),
             icon: Icon(
-              _showGrid ? Icons.view_agenda_outlined : Icons.grid_view_rounded,
+              effectiveGrid
+                  ? Icons.view_agenda_outlined
+                  : Icons.grid_view_rounded,
             ),
           ),
           const SizedBox(width: 8),
@@ -116,7 +103,7 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _PickerHeader(
+              _DriveToolbar(
                 shownCount: files.length,
                 totalCount: widget.files.length,
                 selectedFilter: _filter,
@@ -141,7 +128,7 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
                             BoxConstraints constraints,
                           ) {
                             final bool useGrid =
-                                _showGrid || constraints.maxWidth >= 720;
+                                _showGrid ?? constraints.maxWidth >= 720;
                             return AnimatedSwitcher(
                               duration: const Duration(milliseconds: 220),
                               child:
@@ -226,8 +213,8 @@ class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
   }
 }
 
-class _PickerHeader extends StatelessWidget {
-  const _PickerHeader({
+class _DriveToolbar extends StatelessWidget {
+  const _DriveToolbar({
     required this.shownCount,
     required this.totalCount,
     required this.selectedFilter,
@@ -242,87 +229,72 @@ class _PickerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+    return Material(
+      color: colors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  'Choose a file',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  _FilterChip(
+                    label: 'All',
+                    icon: Icons.folder_open_outlined,
+                    value: _DriveFilter.all,
+                    selected: selectedFilter,
+                    onSelected: onFilterChanged,
                   ),
-                ),
+                  _FilterChip(
+                    label: 'Images',
+                    icon: Icons.image_outlined,
+                    value: _DriveFilter.images,
+                    selected: selectedFilter,
+                    onSelected: onFilterChanged,
+                  ),
+                  _FilterChip(
+                    label: 'Documents',
+                    icon: Icons.description_outlined,
+                    value: _DriveFilter.documents,
+                    selected: selectedFilter,
+                    onSelected: onFilterChanged,
+                  ),
+                  _FilterChip(
+                    label: 'Media',
+                    icon: Icons.play_circle_outline_rounded,
+                    value: _DriveFilter.media,
+                    selected: selectedFilter,
+                    onSelected: onFilterChanged,
+                  ),
+                ],
               ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.secondaryContainer,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Text(
-                    shownCount == totalCount
-                        ? '$totalCount files'
-                        : '$shownCount of $totalCount',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colors.onSecondaryContainer,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Browse files you can download from your Drive.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
             child: Row(
               children: <Widget>[
-                _FilterChip(
-                  label: 'All',
-                  icon: Icons.folder_open_outlined,
-                  value: _DriveFilter.all,
-                  selected: selectedFilter,
-                  onSelected: onFilterChanged,
+                Text(
+                  'Files',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                _FilterChip(
-                  label: 'Images',
-                  icon: Icons.image_outlined,
-                  value: _DriveFilter.images,
-                  selected: selectedFilter,
-                  onSelected: onFilterChanged,
-                ),
-                _FilterChip(
-                  label: 'Documents',
-                  icon: Icons.description_outlined,
-                  value: _DriveFilter.documents,
-                  selected: selectedFilter,
-                  onSelected: onFilterChanged,
-                ),
-                _FilterChip(
-                  label: 'Media',
-                  icon: Icons.play_circle_outline_rounded,
-                  value: _DriveFilter.media,
-                  selected: selectedFilter,
-                  onSelected: onFilterChanged,
+                const Spacer(),
+                Text(
+                  shownCount == totalCount
+                      ? '$totalCount files'
+                      : '$shownCount of $totalCount',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
+          Divider(height: 1, color: colors.outlineVariant),
         ],
       ),
     );
@@ -346,6 +318,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
@@ -353,6 +326,10 @@ class _FilterChip extends StatelessWidget {
         avatar: Icon(icon, size: 18),
         label: Text(label),
         showCheckmark: false,
+        backgroundColor: colors.surface,
+        selectedColor: colors.secondaryContainer,
+        side: BorderSide(color: colors.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         onSelected: onSelected == null ? null : (_) => onSelected!(value),
       ),
     );
@@ -374,9 +351,14 @@ class _FileList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
       itemCount: files.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder:
+          (BuildContext context, int index) => Divider(
+            height: 1,
+            indent: 72,
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
       itemBuilder: (BuildContext context, int index) {
         final drive.File file = files[index];
         return _FileListCard(
@@ -404,10 +386,10 @@ class _FileGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 280,
-        mainAxisExtent: 248,
+        maxCrossAxisExtent: 260,
+        mainAxisExtent: 232,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -439,17 +421,17 @@ class _FileListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Row(
             children: <Widget>[
-              _FilePreview(file: file, width: 76, height: 76),
-              const SizedBox(width: 14),
+              _FilePreview(file: file, width: 48, height: 48),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,17 +440,17 @@ class _FileListCard extends StatelessWidget {
                       file.name ?? 'Unnamed file',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _FileMetadata(file: file),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton.filledTonal(
+              IconButton(
                 tooltip: 'Download ${file.name ?? 'file'}',
                 onPressed: enabled ? onTap : null,
                 icon: const Icon(Icons.download_rounded),
@@ -497,7 +479,10 @@ class _FileGridCard extends StatelessWidget {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Material(
       color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(22),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
