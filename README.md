@@ -25,11 +25,11 @@ Firebase Authentication or a Google API key.
 
 | List view | Grid view |
 |:---:|:---:|
-| <img src="assets/screenshots/drive-picker-list.png" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="assets/screenshots/drive-picker-grid.png" alt="Google Drive Picker responsive grid view" width="300"> |
+| <img src="assets/screenshots/drive-picker-list.jpg" alt="Google Drive Picker list view with thumbnails and filters" width="300"> | <img src="assets/screenshots/drive-picker-grid.jpg" alt="Google Drive Picker responsive grid view" width="300"> |
 
 | Example app | Google account chooser |
 |:---:|:---:|
-| <img src="assets/screenshots/example-home.png" alt="Google Drive Picker example app" width="300"> | <img src="assets/screenshots/account-chooser.png" alt="Privacy-safe Google account chooser example" width="300"> |
+| <img src="assets/screenshots/example-home.jpg" alt="Google Drive Picker example app" width="300"> | <img src="assets/screenshots/account-chooser.jpg" alt="Privacy-safe Google account chooser example" width="300"> |
 
 ## Requirements
 
