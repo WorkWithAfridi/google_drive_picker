@@ -1,4 +1,2 @@
-library googledrivehandler;
-
+export 'src/google_drive_service.dart';
 export 'src/googledrivehandler_functions.dart';
-//Everything is seperated onto their own file system in the folder "src".

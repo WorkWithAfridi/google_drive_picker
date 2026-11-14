@@ -1,486 +1,915 @@
-import 'dart:io' as io;
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:googleapis/drive/v3.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
+
+import 'google_drive_service.dart';
 
 class GoogleDriveScreen extends StatefulWidget {
   const GoogleDriveScreen({
     super.key,
-    required this.fileList,
-    required this.googleDriveApiKey,
-    required this.authenticateClient,
+    required this.files,
+    required this.service,
     required this.userName,
   });
 
-  // This is the file list received from the users google drive, folders are automatically and the contents are extracted and added onto this list!
-  final FileList fileList;
-
-  // This is the authenticated users display name, extracted from the google signin process.
+  final List<drive.File> files;
+  final GoogleDriveService service;
   final String userName;
-
-  // This is the developers GOOGLE CLOUD CONSOLE API CREDENTIAL KEY.
-  final String googleDriveApiKey;
-
-  // This is the authenticaedClient, generated after the signing in process.
-  final authenticateClient;
 
   @override
   State<GoogleDriveScreen> createState() => _GoogleDriveScreenState();
 }
 
+enum _DriveFilter { all, images, documents, media }
+
 class _GoogleDriveScreenState extends State<GoogleDriveScreen> {
-  //On every search input this function gets called, and the search value (searchVal gets updated).
-  onSearchFieldChange(String val) {
-    setState(() {
-      searchVal = val;
-    });
-    // If the input value is null, set searchVal to null.
-    // When the searchVal is set as null the listWill show all the elements.
-    if (val.isEmpty) {
-      setState(() {
-        searchVal = null;
-      });
-    }
+  final TextEditingController _searchController = TextEditingController();
+  bool _showSearch = false;
+  bool _showGrid = false;
+  bool _isDownloading = false;
+  String _query = '';
+  _DriveFilter _filter = _DriveFilter.all;
+
+  List<drive.File> get _visibleFiles {
+    final String normalizedQuery = _query.toLowerCase();
+    return widget.files
+        .where((drive.File file) {
+          final bool matchesQuery =
+              normalizedQuery.isEmpty ||
+              (file.name ?? '').toLowerCase().contains(normalizedQuery);
+          return matchesQuery && _matchesFilter(file, _filter);
+        })
+        .toList(growable: false);
   }
 
-  // Keeps a track of the search toogle.
-  bool showSearchTextForm = false;
-
-  // This is the search value based on which the search results are shown,
-  String? searchVal;
-
-  // This is the search text editing controller.
-  // We wont be using this controller.
-  TextEditingController searchController = TextEditingController();
-
-  // Keeps a track on whether the UI is loading or not
-  bool isLoading = false;
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            size: 18,
-            color: Colors.black,
-          ),
-        ),
+    final List<drive.File> files = _visibleFiles;
+    final ColorScheme colors = Theme.of(context).colorScheme;
 
-        // Title widget changes base on whether user toggles search on not.
-        title: showSearchTextForm
-            ?
-            // when search has been toggled this title Widget will be shown.
-            // This is the text input field where users will input their search term
-            TextFormField(
-                controller: searchController,
-                // textAlignVertical: TextAlignVertical.center,
-                onChanged: (String value) {
-                  onSearchFieldChange(value);
-                },
-                style: TextStyle(
-                  fontFamily: 'FuturaBk',
-                  fontWeight: FontWeight.w400,
-                  color: Colors.grey[700],
-                ),
-                cursorColor: Colors.black,
-                decoration: const InputDecoration(
-                  hintText: "Search",
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 0,
-                    vertical: 0,
+    return Scaffold(
+      backgroundColor: colors.surfaceContainerLowest,
+      appBar: AppBar(
+        backgroundColor: colors.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 20,
+        title:
+            _showSearch
+                ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Search your Drive',
+                    prefixIcon: Icon(Icons.search),
                   ),
+                  textInputAction: TextInputAction.search,
+                  onChanged: (String value) {
+                    setState(() => _query = value.trim());
+                  },
+                )
+                : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text('Google Drive'),
+                    Text(
+                      widget.userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
-              )
-            :
-            //Default title widget
-            Text(
-                "${widget.userName}'s Drive",
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'FuturaBk',
-                  fontSize: 15,
-                ),
-              ),
-        centerTitle: true,
-        actions: [
+        actions: <Widget>[
           IconButton(
-            onPressed: () {
-              setState(() {
-                showSearchTextForm = !showSearchTextForm;
-                searchVal = null;
-              });
-            },
+            tooltip: _showSearch ? 'Close search' : 'Search files',
+            onPressed: _isDownloading ? null : _toggleSearch,
+            icon: Icon(_showSearch ? Icons.close : Icons.search_rounded),
+          ),
+          IconButton(
+            tooltip: _showGrid ? 'Show list' : 'Show grid',
+            onPressed:
+                _isDownloading
+                    ? null
+                    : () => setState(() => _showGrid = !_showGrid),
             icon: Icon(
-              showSearchTextForm ? Icons.close : Icons.search,
-              size: 18,
-              color: Colors.black,
+              _showGrid ? Icons.view_agenda_outlined : Icons.grid_view_rounded,
             ),
-          )
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-            ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Default top padding
-                  const SizedBox(
-                    height: 12,
-                  ),
-                  // List of files from the authenticated users Google drive account
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: widget.fileList.files!.toList().length,
-                    itemBuilder: ((context, index) {
-                      File file = widget.fileList.files!.toList()[index];
-
-                      if (searchVal == null) {
-                        // If searchVal is null, show all files and folders.
-                        return (file.mimeType!.contains(".folder")
-                            ?
-                            // if the list contains folders, ignore the folders. Since all the contents from the folders are already extracted and added in the file list.
-                            const SizedBox.shrink()
-                            : Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 10,
-                                  left: 4,
-                                  right: 4,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => DownloadAlertDialog(
-                                        fileName: file.name ?? "NO-FILE-NAME",
-                                        callBackFunction: () async {
-                                          await _onItemTap(file, widget.authenticateClient);
-                                        },
+        children: <Widget>[
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _PickerHeader(
+                shownCount: files.length,
+                totalCount: widget.files.length,
+                selectedFilter: _filter,
+                onFilterChanged:
+                    _isDownloading
+                        ? null
+                        : (_DriveFilter value) {
+                          setState(() => _filter = value);
+                        },
+              ),
+              Expanded(
+                child:
+                    files.isEmpty
+                        ? _EmptyState(
+                          hasQuery: _query.isNotEmpty,
+                          hasFilter: _filter != _DriveFilter.all,
+                          onReset: _resetFilters,
+                        )
+                        : LayoutBuilder(
+                          builder: (
+                            BuildContext context,
+                            BoxConstraints constraints,
+                          ) {
+                            final bool useGrid =
+                                _showGrid || constraints.maxWidth >= 720;
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child:
+                                  useGrid
+                                      ? _FileGrid(
+                                        key: const ValueKey<String>('grid'),
+                                        files: files,
+                                        enabled: !_isDownloading,
+                                        onTap: _confirmDownload,
+                                      )
+                                      : _FileList(
+                                        key: const ValueKey<String>('list'),
+                                        files: files,
+                                        enabled: !_isDownloading,
+                                        onTap: _confirmDownload,
                                       ),
-                                    );
-                                  },
-                                  child: _ItemCard(
-                                    file: file,
-                                    fileList: widget.fileList,
-                                    index: index,
-                                  ),
-                                ),
-                              ));
-                      } else {
-                        // if the searchVal is not null return only the files that contatins the searchVal in their name
-                        if (file.name!.toLowerCase().contains(searchVal!.toLowerCase())) {
-                          return file.mimeType!.contains(".folder")
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: 10,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () async {
-                                      await _onItemTap(file, widget.authenticateClient);
-                                    },
-                                    child: _ItemCard(
-                                      file: file,
-                                      fileList: widget.fileList,
-                                      index: index,
-                                    ),
-                                  ),
-                                );
-                        } else {
-                          // Ignore if the file name does not contain the searchVal term.
-                          return const SizedBox.shrink();
-                        }
-                      }
-                    }),
+                            );
+                          },
+                        ),
+              ),
+            ],
+          ),
+          if (_isDownloading) const _DownloadingOverlay(),
+        ],
+      ),
+    );
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _showSearch = !_showSearch;
+      if (!_showSearch) {
+        _searchController.clear();
+        _query = '';
+      }
+    });
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _filter = _DriveFilter.all;
+      _query = '';
+      _searchController.clear();
+    });
+  }
+
+  Future<void> _confirmDownload(drive.File file) async {
+    final bool? confirmed = await showAdaptiveDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => DownloadAlertDialog(file: file),
+    );
+    if (confirmed == true) {
+      await _download(file);
+    }
+  }
+
+  Future<void> _download(drive.File file) async {
+    setState(() => _isDownloading = true);
+    try {
+      final File downloadedFile = await widget.service.downloadFile(file);
+      if (mounted) {
+        Navigator.of(context).pop(downloadedFile);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
+    }
+  }
+
+  String _errorMessage(Object error) {
+    if (error case GoogleDriveFileException(:final String message)) {
+      return message;
+    }
+    return 'Unable to download this file. Please try again.';
+  }
+}
+
+class _PickerHeader extends StatelessWidget {
+  const _PickerHeader({
+    required this.shownCount,
+    required this.totalCount,
+    required this.selectedFilter,
+    required this.onFilterChanged,
+  });
+
+  final int shownCount;
+  final int totalCount;
+  final _DriveFilter selectedFilter;
+  final ValueChanged<_DriveFilter>? onFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Choose a file',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  // Default bottom padding
-                  const SizedBox(
-                    height: 12,
+                ),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    shownCount == totalCount
+                        ? '$totalCount files'
+                        : '$shownCount of $totalCount',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Browse files you can download from your Drive.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: <Widget>[
+                _FilterChip(
+                  label: 'All',
+                  icon: Icons.folder_open_outlined,
+                  value: _DriveFilter.all,
+                  selected: selectedFilter,
+                  onSelected: onFilterChanged,
+                ),
+                _FilterChip(
+                  label: 'Images',
+                  icon: Icons.image_outlined,
+                  value: _DriveFilter.images,
+                  selected: selectedFilter,
+                  onSelected: onFilterChanged,
+                ),
+                _FilterChip(
+                  label: 'Documents',
+                  icon: Icons.description_outlined,
+                  value: _DriveFilter.documents,
+                  selected: selectedFilter,
+                  onSelected: onFilterChanged,
+                ),
+                _FilterChip(
+                  label: 'Media',
+                  icon: Icons.play_circle_outline_rounded,
+                  value: _DriveFilter.media,
+                  selected: selectedFilter,
+                  onSelected: onFilterChanged,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final IconData icon;
+  final _DriveFilter value;
+  final _DriveFilter selected;
+  final ValueChanged<_DriveFilter>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        selected: value == selected,
+        avatar: Icon(icon, size: 18),
+        label: Text(label),
+        showCheckmark: false,
+        onSelected: onSelected == null ? null : (_) => onSelected!(value),
+      ),
+    );
+  }
+}
+
+class _FileList extends StatelessWidget {
+  const _FileList({
+    super.key,
+    required this.files,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final List<drive.File> files;
+  final bool enabled;
+  final ValueChanged<drive.File> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      itemCount: files.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (BuildContext context, int index) {
+        final drive.File file = files[index];
+        return _FileListCard(
+          file: file,
+          enabled: enabled,
+          onTap: () => onTap(file),
+        );
+      },
+    );
+  }
+}
+
+class _FileGrid extends StatelessWidget {
+  const _FileGrid({
+    super.key,
+    required this.files,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final List<drive.File> files;
+  final bool enabled;
+  final ValueChanged<drive.File> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 280,
+        mainAxisExtent: 248,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: files.length,
+      itemBuilder: (BuildContext context, int index) {
+        final drive.File file = files[index];
+        return _FileGridCard(
+          file: file,
+          enabled: enabled,
+          onTap: () => onTap(file),
+        );
+      },
+    );
+  }
+}
+
+class _FileListCard extends StatelessWidget {
+  const _FileListCard({
+    required this.file,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final drive.File file;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: <Widget>[
+              _FilePreview(file: file, width: 76, height: 76),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      file.name ?? 'Unnamed file',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _FileMetadata(file: file),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Download ${file.name ?? 'file'}',
+                onPressed: enabled ? onTap : null,
+                icon: const Icon(Icons.download_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FileGridCard extends StatelessWidget {
+  const _FileGridCard({
+    required this.file,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final drive.File file;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  _FilePreview(file: file),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: IconButton.filled(
+                      tooltip: 'Download ${file.name ?? 'file'}',
+                      onPressed: enabled ? onTap : null,
+                      icon: const Icon(Icons.download_rounded),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    file.name ?? 'Unnamed file',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _FileMetadata(file: file),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilePreview extends StatelessWidget {
+  const _FilePreview({this.width, this.height, required this.file});
+
+  final double? width;
+  final double? height;
+  final drive.File file;
+
+  @override
+  Widget build(BuildContext context) {
+    final _FileVisual visual = _visualForFile(file);
+    final String? thumbnail = file.thumbnailLink;
+    return Semantics(
+      image: true,
+      label: 'Preview of ${file.name ?? 'file'}',
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: visual.color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child:
+                thumbnail == null || thumbnail.isEmpty
+                    ? _FilePlaceholder(visual: visual)
+                    : Image.network(
+                      thumbnail,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      loadingBuilder:
+                          (
+                            BuildContext context,
+                            Widget child,
+                            ImageChunkEvent? loadingProgress,
+                          ) =>
+                              loadingProgress == null
+                                  ? child
+                                  : _FilePlaceholder(visual: visual),
+                      errorBuilder:
+                          (_, _, _) => _FilePlaceholder(visual: visual),
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilePlaceholder extends StatelessWidget {
+  const _FilePlaceholder({required this.visual});
+
+  final _FileVisual visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(child: Icon(visual.icon, size: 34, color: visual.color));
+  }
+}
+
+class _FileMetadata extends StatelessWidget {
+  const _FileMetadata({required this.file});
+
+  final drive.File file;
+
+  @override
+  Widget build(BuildContext context) {
+    final _FileVisual visual = _visualForFile(file);
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Row(
+      children: <Widget>[
+        Icon(visual.icon, size: 15, color: visual.color),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            <String>[
+              visual.label,
+              if (file.size != null) _formatBytes(file.size!),
+              if (file.modifiedTime != null) _formatDate(file.modifiedTime!),
+            ].join(' · '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.hasQuery,
+    required this.hasFilter,
+    required this.onReset,
+  });
+
+  final bool hasQuery;
+  final bool hasFilter;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isFiltered = hasQuery || hasFilter;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Icon(
+                  isFiltered
+                      ? Icons.search_off_rounded
+                      : Icons.folder_open_rounded,
+                  size: 42,
+                  color: colors.onSecondaryContainer,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              isFiltered ? 'No matching files' : 'Your Drive looks empty',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isFiltered
+                  ? 'Try another search or clear the active filter.'
+                  : 'No downloadable files were found for this account.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            if (isFiltered) ...<Widget>[
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: onReset,
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: const Text('Clear filters'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadingOverlay extends StatelessWidget {
+  const _DownloadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        const ModalBarrier(dismissible: false, color: Color(0x52000000)),
+        Center(
+          child: Card(
+            elevation: 6,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox.square(
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Downloading file…',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
             ),
           ),
-          // If is loading show, circular progress indicator.
-          isLoading
-              ? const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: LinearProgressIndicator(),
-                )
-              : const SizedBox.shrink(),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _onItemTap(File file, var authenticateClient) async {
-    setState(() {
-      isLoading = true;
-    });
-    String fileName = file.name!;
-    String fileId = file.id!;
-    String fileMimeType = file.mimeType!;
-
-    http.Response? response;
-
-    if (fileMimeType.contains("spreadsheet") && !fileName.contains(".xlsx")) {
-      //If the file is a google doc file, export the file as instructed by the google team.
-      String url =
-          "https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&key=${widget.googleDriveApiKey} HTTP/1.1";
-
-      response = await authenticateClient.get(
-        Uri.parse(url),
-      );
-    } else if (!fileMimeType.contains(".folder")) {
-      // If the file is uploaded from somewhere else or if the file is not a google doc file process it with the "Files: Get" process.
-      String url = "https://www.googleapis.com/drive/v3/files/$fileId?includeLabels=alt%3Dmedia&alt=media&key=${widget.googleDriveApiKey} HTTP/1.1";
-
-      response = await authenticateClient.get(
-        Uri.parse(url),
-      );
-    }
-
-    if (response != null) {
-      // Get temporary application document directory
-      final dir = await getApplicationDocumentsDirectory();
-      // Create custom path, where the downloaded file will be saved. TEMPORARILY
-      String path = "${dir.path}/${file.name}";
-      // Save the file
-      io.File myFile = await io.File(path).writeAsBytes(response.bodyBytes);
-      // Returns the files
-      Navigator.pop(
-        context,
-        myFile,
-      );
-    }
-    setState(() {
-      isLoading = false;
-    });
-  }
-}
-
-// This is the custom widget which lays out the google drive files.
-class _ItemCard extends StatelessWidget {
-  _ItemCard({
-    Key? key,
-    required this.file,
-    required this.fileList,
-    required this.index,
-  }) : super(key: key);
-
-  final int index;
-  final File file;
-  final FileList fileList;
-
-  // Add other mimeTypes here
-  final List<String> videoFileExt = ["video/mp4", "audio/mp4"];
-  final List<String> powerpointExt = ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.google-apps.presentation"];
-  final List<String> pdfExt = ["application/pdf"];
-  final List<String> picExt = ["image/jpeg"];
-
-  @override
-  Widget build(BuildContext context) {
-    IconData displayIcon = videoFileExt.contains(file.mimeType)
-        ? Icons.video_file
-        : powerpointExt.contains(file.mimeType)
-            ? Icons.slideshow
-            : pdfExt.contains(file.mimeType)
-                ? Icons.picture_as_pdf
-                : picExt.contains(file.mimeType)
-                    ? Icons.image
-                    : Icons.description;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            displayIcon,
-            color: Colors.lightBlue,
-            size: 20,
-          ),
-          const SizedBox(
-            width: 8,
-          ),
-          Expanded(
-            child: Text(
-              fileList.files!.toList()[index].name!,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                fontFamily: 'FuturaBk',
-              ),
-            ),
-          )
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class DownloadAlertDialog extends StatelessWidget {
-  final String fileName;
-  Function callBackFunction;
+  const DownloadAlertDialog({super.key, required this.file});
 
-  DownloadAlertDialog({
-    super.key,
-    required this.fileName,
-    required this.callBackFunction,
-  });
+  final drive.File file;
 
   @override
   Widget build(BuildContext context) {
-    return io.Platform.isIOS ? _buildCupertinoDialog(context) : _buildMaterialDialog(context);
-  }
+    final String fileName = file.name ?? 'Unnamed file';
+    final TargetPlatform platform = defaultTargetPlatform;
+    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+      return CupertinoAlertDialog(
+        title: const Text('Download file?'),
+        content: Text(fileName),
+        actions: <Widget>[
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Download'),
+          ),
+        ],
+      );
+    }
 
-  Widget _buildMaterialDialog(BuildContext context) {
+    final _FileVisual visual = _visualForFile(file);
     return AlertDialog(
-      title: const Text(
-        'Download File',
-        style: TextStyle(
-          fontFamily: 'FuturaBk',
-          fontWeight: FontWeight.w700,
+      icon: DecoratedBox(
+        decoration: BoxDecoration(
+          color: visual.color.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Icon(visual.icon, color: visual.color, size: 30),
         ),
       ),
+      title: const Text('Download file?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          const Text(
-            'Do you want to download the file:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'FuturaBk',
-            ),
+        children: <Widget>[
+          Text(
+            fileName,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            fileName,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'FuturaBk',
-            ),
+            <String>[
+              visual.label,
+              if (file.size != null) _formatBytes(file.size!),
+            ].join(' · '),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
-      actions: [
+      actions: <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'Cancel'.toUpperCase(),
-            style: TextStyle(
-              fontFamily: 'FuturaBk',
-              color: Colors.grey[700],
-            ),
-          ),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
         ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            callBackFunction();
-          },
-          child: Text(
-            'Download'.toUpperCase(),
-            style: const TextStyle(
-              fontFamily: 'FuturaBk',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(true),
+          icon: const Icon(Icons.download_rounded),
+          label: const Text('Download'),
         ),
       ],
-      actionsPadding: const EdgeInsets.only(
-        right: 16,
-        bottom: 6,
-      ),
     );
   }
+}
 
-  Widget _buildCupertinoDialog(BuildContext context) {
-    return CupertinoAlertDialog(
-      title: const Text(
-        'Download File',
-        style: TextStyle(
-          fontFamily: 'FuturaBk',
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: Column(
-        children: [
-          const SizedBox(height: 4),
-          const Text(
-            'Do you want to download the file:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'FuturaBk',
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            fileName,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'FuturaBk',
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        CupertinoDialogAction(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(
-              fontFamily: 'FuturaBk',
-            ),
-          ),
-        ),
-        CupertinoDialogAction(
-          onPressed: () {
-            Navigator.of(context).pop();
-            callBackFunction();
-          },
-          isDefaultAction: true,
-          child: const Text(
-            'Download',
-            style: TextStyle(
-              fontFamily: 'FuturaBk',
-            ),
-          ),
-        ),
-      ],
+bool _matchesFilter(drive.File file, _DriveFilter filter) {
+  final String mimeType = file.mimeType ?? '';
+  return switch (filter) {
+    _DriveFilter.all => true,
+    _DriveFilter.images => mimeType.startsWith('image/'),
+    _DriveFilter.media =>
+      mimeType.startsWith('video/') || mimeType.startsWith('audio/'),
+    _DriveFilter.documents =>
+      !mimeType.startsWith('image/') &&
+          !mimeType.startsWith('video/') &&
+          !mimeType.startsWith('audio/'),
+  };
+}
+
+_FileVisual _visualForFile(drive.File file) {
+  final String mimeType = file.mimeType ?? '';
+  if (mimeType.startsWith('image/')) {
+    return const _FileVisual(Icons.image_rounded, Colors.purple, 'Image');
+  }
+  if (mimeType.startsWith('video/')) {
+    return const _FileVisual(Icons.movie_rounded, Colors.red, 'Video');
+  }
+  if (mimeType.startsWith('audio/')) {
+    return const _FileVisual(Icons.audio_file_rounded, Colors.orange, 'Audio');
+  }
+  if (mimeType == 'application/pdf') {
+    return const _FileVisual(Icons.picture_as_pdf_rounded, Colors.red, 'PDF');
+  }
+  if (mimeType.contains('spreadsheet') || mimeType.contains('excel')) {
+    return const _FileVisual(
+      Icons.table_chart_rounded,
+      Colors.green,
+      'Spreadsheet',
     );
   }
+  if (mimeType.contains('presentation') || mimeType.contains('powerpoint')) {
+    return const _FileVisual(
+      Icons.slideshow_rounded,
+      Colors.deepOrange,
+      'Presentation',
+    );
+  }
+  if (mimeType.contains('document') ||
+      mimeType.contains('word') ||
+      mimeType.startsWith('text/')) {
+    return const _FileVisual(
+      Icons.description_rounded,
+      Colors.blue,
+      'Document',
+    );
+  }
+  if (mimeType.contains('zip') || mimeType.contains('compressed')) {
+    return const _FileVisual(Icons.folder_zip_rounded, Colors.amber, 'Archive');
+  }
+  return const _FileVisual(
+    Icons.insert_drive_file_rounded,
+    Colors.blueGrey,
+    'File',
+  );
+}
+
+String _formatDate(DateTime date) {
+  final DateTime local = date.toLocal();
+  final DateTime now = DateTime.now();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime value = DateTime(local.year, local.month, local.day);
+  final int difference = today.difference(value).inDays;
+  if (difference == 0) return 'Today';
+  if (difference == 1) return 'Yesterday';
+  return '${local.day.toString().padLeft(2, '0')}/'
+      '${local.month.toString().padLeft(2, '0')}/${local.year}';
+}
+
+String _formatBytes(String value) {
+  final int? bytes = int.tryParse(value);
+  if (bytes == null || bytes < 0) return value;
+  if (bytes < 1024) return '$bytes B';
+  const List<String> units = <String>['KB', 'MB', 'GB', 'TB'];
+  double size = bytes / 1024;
+  int unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit++;
+  }
+  final int decimals = size >= 10 ? 0 : 1;
+  return '${size.toStringAsFixed(decimals)} ${units[unit]}';
+}
+
+final class _FileVisual {
+  const _FileVisual(this.icon, this.color, this.label);
+
+  final IconData icon;
+  final Color color;
+  final String label;
 }

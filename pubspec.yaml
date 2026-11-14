@@ -1,32 +1,41 @@
 name: googledrivehandler
-description: A package for viewing, browsing, searching, downloading and
-  uploading Google Drive files.
-version: 1.0.7
-homepage: https://github.com/WorkWithAfridi/GoogleDriveHandler
+description: Browse, search, and download Google Drive files from Flutter apps.
+version: 2.0.0
+homepage: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package
+repository: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package
+issue_tracker: https://github.com/WorkWithAfridi/GoogleDriveHandler-Package/issues
+topics:
+  - google-drive
+  - google-sign-in
+  - files
+  - download
 
 environment:
-  sdk: ">=3.1.3 <4.0.0"
-  flutter: ">=3.0.0"
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
 
 dependencies:
-  firebase_auth: ^4.17.5
-  firebase_core: ^2.25.4
   flutter:
     sdk: flutter
-  google_sign_in: ^6.2.1
-  googleapis: ^12.0.0
-  http: ^1.1.0
-  path_provider: ^2.1.2
+  google_sign_in: ^7.2.0
+  googleapis: ^18.0.0
+  http: ^1.6.0
+  path: ^1.9.1
+  path_provider: ^2.1.6
 
 dev_dependencies:
-  flutter_lints: ^2.0.3
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
-flutter: null
+flutter:
+  fonts:
+    - family: FuturaBk
+      fonts:
+        - asset: fonts/futura_bk.ttf
 
 # To add assets to your package, add an assets section, like this:
 # assets:
@@ -43,10 +52,6 @@ flutter: null
 # "family" key with the font family name, and a "fonts" key with a
 # list giving the asset and other descriptors for the font. For
 # example:
-fonts:
-  - family: FuturaBk
-    fonts:
-      - asset: fonts/futura_bk.ttf
 #       - asset: fonts/Schyler-Italic.ttf
 #         style: italic
 #   - family: Trajan Pro
