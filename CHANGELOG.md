@@ -1,3 +1,18 @@
+## 2.0.0
+
+- Migrated to `google_sign_in` 7 and `googleapis` 18.
+- Removed Firebase and API-key requirements in favor of read-only OAuth.
+- Added complete pagination, Shared Drive support, shortcut handling, and
+  download-permission checks.
+- Added native Google Docs, Sheets, Slides, and Drawings exports.
+- Replaced raw download URLs with the generated Drive API media methods.
+- Added typed errors, safe filenames, temporary storage, and client cleanup.
+- Rebuilt the picker with Drive thumbnails, responsive list/grid views,
+  file-type filters, search, adaptive dialogs, and polished loading/empty/error
+  states.
+- Added service and widget tests and upgraded the example platform projects.
+- Raised the minimum SDKs to Flutter 3.29 and Dart 3.7.
+
 ## 1.0.6-7
 - Some minor bugfixes and updated dependencies to the latest version
 ## 1.0.5

@@ -1,16 +1,93 @@
-# example
+# Google Drive Handler example
 
-A new Flutter project.
+The example demonstrates the complete 2.0 flow:
 
-## Getting Started
+- Initialize Google Sign-In once.
+- Authenticate and request read-only Drive authorization.
+- Browse, search, and select a Drive file.
+- Inspect and reopen the downloaded temporary file.
+- Handle cancellation and errors.
+- Sign out.
 
-This project is a starting point for a Flutter application.
+## Configure Google OAuth
 
-A few resources to get you started if this is your first Flutter project:
+Enable the Google Drive API and create OAuth clients before running the app.
+The package README contains the complete
+[Google Cloud walkthrough](../README.md#google-cloud-setup), including consent
+screen, test-user, scope, credential, and production-verification steps.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+The example uses the identifiers:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Android application ID: `com.immichtv.googledrivehandler.example`
+- iOS bundle identifier: `com.example.example`
+
+For a real application, replace these sample identifiers in the native project
+and create matching OAuth clients.
+
+### Android
+
+Register the application ID and signing SHA fingerprints. Then either:
+
+1. Configure `google-services.json` with a web OAuth client, or
+2. Pass the web OAuth client ID with `GOOGLE_SERVER_CLIENT_ID`.
+
+Get the debug signing fingerprint with:
+
+```sh
+cd android
+./gradlew signingReport
+```
+
+Create both an **Android** OAuth client for the package/SHA pair and a **Web
+application** OAuth client. The Web client ID is the value supplied through
+`GOOGLE_SERVER_CLIENT_ID`; do not use its client secret.
+
+### iOS
+
+Replace `YOUR_REVERSED_CLIENT_ID` in
+`ios/Runner/Info.plist` with the reversed iOS OAuth client ID. Then either add
+`GIDClientID` to that plist or pass the normal iOS client ID with
+`GOOGLE_CLIENT_ID`.
+
+Create the client under **Google Auth Platform → Clients → Create client →
+iOS**, using bundle identifier `com.example.example`. The Cloud console shows
+the iOS URL scheme, or the downloaded plist provides `CLIENT_ID` and
+`REVERSED_CLIENT_ID`.
+
+The URL scheme is required even when using `--dart-define`.
+
+## Run
+
+With native platform configuration:
+
+```sh
+flutter pub get
+flutter run
+```
+
+With identifiers supplied from the command line:
+
+```sh
+flutter run \
+  --dart-define=GOOGLE_CLIENT_ID=YOUR_IOS_CLIENT_ID \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID
+```
+
+Only provide the identifiers required by the current platform. OAuth client
+IDs are identifiers rather than secrets, but production projects should manage
+environment-specific values through their normal build configuration.
+
+## Expected behavior
+
+1. Tap **Choose a file**.
+2. Select a Google account and authorize read-only Drive access.
+3. Search or browse the file list.
+4. Confirm a download.
+5. The selected path appears on the home screen; use the open icon to launch a
+   compatible installed application.
+6. Use the app-bar sign-out action to end the Google session.
+
+The file is temporary. Copy it elsewhere before relying on it for later use.
+
+See the package [README](../README.md), [migration guide](../MIGRATION.md), and
+[troubleshooting guide](../TROUBLESHOOTING.md) for more detail.
