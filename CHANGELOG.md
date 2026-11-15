@@ -1,3 +1,8 @@
+# 2.1.3
+
+- Added a branded Google Drive Picker cover image to the README for GitHub and
+  pub.dev.
+
 # 2.1.2
 
 - Moved the legacy `setAPIKey` compatibility note from the main README to the
