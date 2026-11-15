@@ -498,10 +498,10 @@ Wrap picker calls in `try`/`catch` and present an appropriate retry action.
 
 ## Migration and support
 
-- [Migration guide from 1.x](MIGRATION.md)
-- [Troubleshooting guide](TROUBLESHOOTING.md)
-- [Complete example](example/README.md)
-- [Changelog](CHANGELOG.md)
+- [Migration guide from 1.x](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/MIGRATION.md)
+- [Troubleshooting guide](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/TROUBLESHOOTING.md)
+- [Complete example](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/example/README.md)
+- [Changelog](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/CHANGELOG.md)
 
 The deprecated `setAPIKey` method is a no-op retained only for short-term source
 compatibility. New code should not call it.
