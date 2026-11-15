@@ -1,3 +1,8 @@
+# 2.1.2
+
+- Moved the legacy `setAPIKey` compatibility note from the main README to the
+  migration guide and clarified that OAuth configuration is still required.
+
 # 2.1.1
 
 - Fixed the migration, troubleshooting, complete-example, and changelog links

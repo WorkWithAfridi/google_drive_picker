@@ -50,7 +50,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^2.1.1
+  google_drive_picker: ^2.1.2
 ```
 
 Then run:
@@ -502,6 +502,3 @@ Wrap picker calls in `try`/`catch` and present an appropriate retry action.
 - [Troubleshooting guide](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/TROUBLESHOOTING.md)
 - [Complete example](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/example/README.md)
 - [Changelog](https://github.com/WorkWithAfridi/google_drive_picker/blob/google_drive_picker/CHANGELOG.md)
-
-The deprecated `setAPIKey` method is a no-op retained only for short-term source
-compatibility. New code should not call it.

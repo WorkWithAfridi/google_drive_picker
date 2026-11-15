@@ -9,7 +9,7 @@ changed.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^2.1.1
+  google_drive_picker: ^2.1.2
 ```
 
 Remove the old dependency:
@@ -64,7 +64,23 @@ Use `GoogleDrivePicker.instance.signOut()` to disconnect the current account.
 The longer `getFileFromGoogleDrive` method remains temporarily available as a
 deprecated migration alias.
 
-## 4. Keep existing OAuth configuration
+## 4. Remove obsolete API-key setup
+
+Remove calls to `setAPIKey`. Google Drive requests are authorized with the
+signed-in user's OAuth access token, so this package does not require a Google
+API key:
+
+```dart
+// Remove this legacy call:
+GoogleDrivePicker.instance.setAPIKey(apiKey: '...');
+```
+
+The deprecated method remains a no-op in the 2.x release line only to let
+existing applications migrate without an immediate compilation failure. It is
+scheduled for removal in the next major release. OAuth client configuration is
+still required as described below.
+
+## 5. Keep existing OAuth configuration
 
 Applications migrating from `googledrivehandler` do not need new OAuth clients
 when their Android application ID, Apple bundle ID, and signing certificates
@@ -74,7 +90,7 @@ Google Cloud OAuth registration.
 If you copy the included example instead of migrating your own app, register
 its application ID and signing SHA fingerprints as described in the README.
 
-## 5. Verify
+## 6. Verify
 
 ```sh
 flutter analyze
