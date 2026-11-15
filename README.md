@@ -50,7 +50,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_drive_picker: ^2.1.0
+  google_drive_picker: ^2.1.1
 ```
 
 Then run:

@@ -1,3 +1,8 @@
+# 2.1.1
+
+- Fixed the migration, troubleshooting, complete-example, and changelog links
+  on pub.dev by using stable absolute GitHub URLs.
+
 # 2.1.0
 
 - Updated the picker to a cleaner Google Drive-inspired layout.
