@@ -1,5 +1,9 @@
 # Google Drive Picker
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/WorkWithAfridi/google_drive_picker/google_drive_picker/assets/branding/google-drive-picker-flutter-cover.png" alt="Google Drive Picker for Flutter" width="100%">
+</p>
+
 `google_drive_picker` is a modern Flutter file picker for browsing, searching,
 and downloading files from a user's Google Drive.
 
